@@ -1,6 +1,6 @@
 ---
 name: typescript-advanced-types
-description: 提供深度 TypeScript 类型系统支持。包括泛型约束、条件类型推导(infer)、映射类型重映射、模板字面量、以及利用 NoInfer 锁定推断。适用于构建类型安全的应用。用于构建复杂类型、创建可重用的类型工具、消除 any 类型以及优化类型定义。
+description: 提供深度 TypeScript 类型系统支持。包括泛型约束、条件类型推导(infer)、映射类型重映射、模板字面量、以及利用 NoInfer 锁定推断。适用于构建类型安全的应用。当需要编写类型安全的工具类、事件系统、状态管理、API 客户端、表单处理、数据转换等复杂 TypeScript 代码时自动激活。用于构建复杂类型、创建可重用的类型工具、消除 any 类型以及优化类型定义。
 ---
 
 # TypeScript 高级类型
