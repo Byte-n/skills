@@ -398,3 +398,45 @@ function processValue(value: unknown) {
   console.log(value.toUpperCase());
 }
 ```
+
+- **字面量类型与 `as const` / `satisfies`**
+
+** 阻止 TypeScript 的类型拓宽（Type Widening），将变量锁定在最精确的字面量值上。
+
+当使用 `let` 或对象属性时，TypeScript 默认会进行类型拓宽：
+```typescript
+// 未使用 as const：req1.method 的类型被推断为 string
+const req1 = { url: "[https://api.com](https://api.com)", method: "GET" };
+
+// 使用 as const：req2.method 的类型被精确锁定为 "GET" (只读)
+const req2 = { url: "[https://api.com](https://api.com)", method: "GET" } as const;
+
+// 类型推断为只读元组（Readonly Tuple）: readonly ["CREATE", "UPDATE", "DELETE"]
+const actions = ["CREATE", "UPDATE", "DELETE"] as const;
+
+// 自动提取联合类型: "CREATE" | "UPDATE" | "DELETE"
+type Action = (typeof actions)[number];
+```
+
+配合 `satisfies` 进行双重校验：`satisfies` 操作符允许我们在保留最精确推断的同时，验证对象是否符合某种类型。
+
+```typescript
+type Color = 'red' | 'green' | 'blue' | { r: number; g: number; b: number };
+
+// 即验证了符合 Record<string, Color> 类型，又保留了 palette.red 的精确字面量类型 'red' (而不是 string)
+const palette = {
+  red: 'red',
+  green: { r: 0, g: 255, b: 0 },
+} as const satisfies Record<string, Color>
+
+// 此时 palette.red 依然可以调用字符串方法，而不会被视为联合类型
+console.log(palette.red.toUpperCase())
+
+const configs = {
+  getUser: { url: '/user', method: 'GET' },
+  saveUser: { url: '/user', method: 'POST' },
+} satisfies Record<string, ApiConfig>
+
+// 这里的 method 被精确推导为 "GET"
+const m = configs.getUser.method
+```
