@@ -34,17 +34,50 @@ function httpRequest(url, options = {}) {
 }
 
 /**
+ * 通过项目名称查找项目 ID
+ */
+function resolveProjectId(projectName) {
+  const mapJson = process.env.APIFOX_PROJECT_MAP;
+  if (!mapJson) {
+    throw new Error('Missing APIFOX_PROJECT_MAP environment variable');
+  }
+
+  let map;
+  try {
+    map = JSON.parse(mapJson);
+  } catch (e) {
+    throw new Error(`Invalid APIFOX_PROJECT_MAP JSON: ${e.message}`);
+  }
+
+  const entry = map.find((item) => item.label === projectName);
+  if (!entry) {
+    const names = map.map((item) => item.label).join(', ');
+    throw new Error(`Project not found: "${projectName}". Available projects: ${names}`);
+  }
+
+  return String(entry.value);
+}
+
+/**
  * 获取 OpenAPI 数据
  */
-async function fetchOpenAPI(projectId) {
+async function fetchOpenAPI(projectName) {
   const token = process.env.APIFOX_ACCESS_TOKEN;
   if (!token) {
     throw new Error('Missing APIFOX_ACCESS_TOKEN environment variable');
   }
 
-  const resolvedProjectId = projectId || process.env.APIFOX_PROJECT_ID;
+  // 优先通过项目名查找 ID，否则直接使用 APIFOX_PROJECT_ID
+  let resolvedProjectId;
+  if (projectName) {
+    resolvedProjectId = resolveProjectId(projectName);
+  } else {
+    resolvedProjectId = process.env.APIFOX_PROJECT_ID;
+  }
   if (!resolvedProjectId) {
-    throw new Error('Missing APIFOX_PROJECT_ID environment variable or --projectId parameter');
+    throw new Error(
+      'Missing project: provide --projectName or APIFOX_PROJECT_ID'
+    );
   }
   const url = `${APIFOX_BASE_URL}/projects/${resolvedProjectId}/export-openapi?locale=zh-CN`;
 
@@ -194,7 +227,7 @@ async function cmdGetPath(params) {
     throw new Error('Missing required parameters: --path and --method');
   }
 
-  const oas = await fetchOpenAPI(params.projectId);
+  const oas = await fetchOpenAPI(params.projectName);
 
   const pathItem = oas.paths?.[params.path];
   if (!pathItem) {
@@ -282,7 +315,7 @@ async function cmdGetSchema(params) {
     throw new Error('Missing required parameter: --name');
   }
 
-  const oas = await fetchOpenAPI(params.projectId);
+  const oas = await fetchOpenAPI(params.projectName);
   const schema = oas.components?.schemas?.[params.name];
   if (!schema) {
     throw new Error(`Schema not found: ${params.name}`);
@@ -299,7 +332,7 @@ async function cmdSearchPaths(params) {
     throw new Error('Missing required parameter: --keyword');
   }
 
-  const oas = await fetchOpenAPI(params.projectId);
+  const oas = await fetchOpenAPI(params.projectName);
   const paths = oas.paths || {};
   const results = [];
   const keywordLower = params.keyword.toLowerCase();
@@ -339,7 +372,7 @@ async function cmdSearchPaths(params) {
  * list_modules: 列出所有模块
  */
 async function cmdListModules(params) {
-  const oas = await fetchOpenAPI(params.projectId);
+  const oas = await fetchOpenAPI(params.projectName);
   const paths = oas.paths || {};
   const moduleMap = {};
 
@@ -364,7 +397,7 @@ async function cmdGetModule(params) {
     throw new Error('Missing required parameter: --module');
   }
 
-  const oas = await fetchOpenAPI(params.projectId);
+  const oas = await fetchOpenAPI(params.projectName);
   const paths = oas.paths || {};
   const results = [];
 
