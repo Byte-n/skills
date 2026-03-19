@@ -31,7 +31,7 @@ compatibility: 需要 Node.js 和 Apifox API 凭证
 ### search_paths — 搜索接口
 
 ```bash
-node .claude/skills/apifox/scripts/index.js search_paths --keyword "用户" [--module "api.v1"] [--method "GET"] [--limit 10]
+node scripts/index.js search_paths --keyword "用户" [--module "api.v1"] [--method "GET"] [--limit 10]
 ```
 
 - `--keyword`（必需）：搜索词，匹配路径或接口摘要
@@ -42,7 +42,7 @@ node .claude/skills/apifox/scripts/index.js search_paths --keyword "用户" [--m
 ### get_path — 获取接口详情
 
 ```bash
-node .claude/skills/apifox/scripts/index.js get_path --path "/xxx/yyy" --method "POST" [--resolve-refs]
+node scripts/index.js get_path --path "/xxx/yyy" --method "POST" [--resolve-refs]
 ```
 
 - `--path`（必需）：接口路径
@@ -52,7 +52,7 @@ node .claude/skills/apifox/scripts/index.js get_path --path "/xxx/yyy" --method 
 ### get_schema — 获取 Schema 定义
 
 ```bash
-node .claude/skills/apifox/scripts/index.js get_schema --name "User"
+node scripts/index.js get_schema --name "User"
 ```
 
 - `--name`（必需）：Schema 名称
@@ -60,7 +60,7 @@ node .claude/skills/apifox/scripts/index.js get_schema --name "User"
 ### list_modules — 列出所有模块
 
 ```bash
-node .claude/skills/apifox/scripts/index.js list_modules
+node scripts/index.js list_modules
 ```
 
 返回按接口数量排序的模块列表。
@@ -68,7 +68,7 @@ node .claude/skills/apifox/scripts/index.js list_modules
 ### get_module — 获取模块下所有接口
 
 ```bash
-node .claude/skills/apifox/scripts/index.js get_module --module "api.users"
+node scripts/index.js get_module --module "api.users"
 ```
 
 - `--module`（必需）：模块名称
