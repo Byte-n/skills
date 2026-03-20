@@ -8,25 +8,39 @@ compatibility: 需要 Node.js 和 Apifox API 凭证
 
 ## 使用前检查
 
-开始执行命令前，先分析上下文是否已提供 `--projectName`。该信息可能以"项目 / 模块 / apifox 项目 / apifox 模块"
-等表述出现，需同义识别并映射到 `--projectName`。
+### 必须提供 --projectName
+
+- 从用户输入中识别：「项目」「模块」「apifox 项目」「apifox 模块」等表述均映射为 `--projectName`
+- **示例**：`读取销售管理模块的 /api/users 接口` → `--projectName="销售管理模块"`
+
+### ⚠️ 严格禁止
+
+| 禁止行为               | 说明              |
+|--------------------|-----------------|
+| ❌ 擅自猜想 projectName | 未明确提供时，必须向用户确认  |
+| ❌ 轮询所有 projectName | 禁止遍历查询全部项目以匹配接口 |
+
+### 执行前置条件
+
+```
+[ ] 已识别 --projectName
+[ ] 已识别接口路径（如有）
+[ ] 未猜测任何参数
+```
 
 ## 公共参数
 
 所有命令均支持以下可选参数：
 
-- `--projectName`：Apifox 项目名称
-
-## get_path 调用规则
-
-调用 `get_path` 前必须确认 `--method`。若用户未指定请求方法，禁止猜测，必须：
-
-1. 先调用 `search_paths --keyword <完整的接口路径>` 获取接口列表
-2. 从结果中提取 `method`：
-    - **1 个结果**：直接使用
-    - **多个结果**：向用户列出候选项（包含 `method`、`path`、`summary`），等待用户确认后再继续
+- `--projectName`：Apifox 模块名称
 
 ## 可用命令
+
+### list_projects — 列出所有可用项目
+
+```bash
+node scripts/index.js list_projects
+```
 
 ### search_paths — 搜索接口
 
@@ -42,11 +56,11 @@ node scripts/index.js search_paths --keyword "用户" [--module "api.v1"] [--met
 ### get_path — 获取接口详情
 
 ```bash
-node scripts/index.js get_path --path "/xxx/yyy" --method "POST" [--resolve-refs]
+node scripts/index.js get_path --path "/xxx/yyy" [--method "POST"] [--resolve-refs]
 ```
 
 - `--path`（必需）：接口路径
-- `--method`（必需）：HTTP 方法
+- `--method`（可选）：HTTP 方法。若省略且路径只有 1 个方法则自动使用；若有多个方法将返回错误要求选择
 - `--resolve-refs`：递归解析所有 `$ref`，结果写入 `components.schemas`
 
 ### get_schema — 获取 Schema 定义
@@ -73,14 +87,6 @@ node scripts/index.js get_module --module "api.users"
 
 - `--module`（必需）：模块名称
 
-## 典型工作流程
-
-1. **探索结构**：`list_modules`
-2. **搜索接口**：`search_paths --keyword <词>`
-3. **查看详情**：`get_path --path <path> --method <method>`
-4. **查看 Schema**：`get_schema --name <name>`
-
 ## 技巧
 
-- 模块名从路径自动提取，规律为 `api.v1`、`api.auth`、`rpc.service` 等
 - 错误时返回 `{ success: false, error: "message" }`，需向用户清晰解释

@@ -39,23 +39,48 @@ function httpRequest(url, options = {}) {
 function resolveProjectId(projectName) {
   const mapJson = process.env.APIFOX_PROJECT_MAP;
   if (!mapJson) {
-    throw new Error('Missing APIFOX_PROJECT_MAP environment variable');
+    throw new Error('[FATAL] Missing APIFOX_PROJECT_MAP environment variable. AI MUST stop working immediately and ask user to set this environment variable before proceeding.');
   }
 
   let map;
   try {
     map = JSON.parse(mapJson);
   } catch (e) {
-    throw new Error(`Invalid APIFOX_PROJECT_MAP JSON: ${e.message}`);
+    throw new Error(`[FATAL] Invalid APIFOX_PROJECT_MAP JSON: ${e.message}. AI MUST stop working immediately and ask user to fix the environment variable before proceeding.`);
   }
 
   const entry = map.find((item) => item.label === projectName);
   if (!entry) {
     const names = map.map((item) => item.label).join(', ');
-    throw new Error(`Project not found: "${projectName}". Available projects: ${names}`);
+    throw new Error(`[ACTION_REQUIRED] Project not found: "${projectName}". Available projects: ${names}. AI MUST ask user to select a correct project name from the available list.`);
   }
 
   return String(entry.value);
+}
+
+function getAvailableProjects() {
+  const mapJson = process.env.APIFOX_PROJECT_MAP;
+  if (!mapJson) {
+    throw new Error('[FATAL] Missing APIFOX_PROJECT_MAP environment variable. AI MUST stop working immediately and ask user to set this environment variable before proceeding.');
+  }
+
+  let map;
+  try {
+    map = JSON.parse(mapJson);
+  } catch (e) {
+    throw new Error(`[FATAL] Invalid APIFOX_PROJECT_MAP JSON: ${e.message}. AI MUST stop working immediately and ask user to fix the environment variable before proceeding.`);
+  }
+
+  if (!Array.isArray(map) || map.length === 0) {
+    return { total: 0, projects: [] };
+  }
+
+  const projects = map.map((item) => ({
+    name: item.label,
+    id: String(item.value),
+  }));
+
+  return { total: projects.length, projects };
 }
 
 /**
@@ -64,7 +89,7 @@ function resolveProjectId(projectName) {
 async function fetchOpenAPI(projectName) {
   const token = process.env.APIFOX_ACCESS_TOKEN;
   if (!token) {
-    throw new Error('Missing APIFOX_ACCESS_TOKEN environment variable');
+    throw new Error('[FATAL] Missing APIFOX_ACCESS_TOKEN environment variable. AI MUST stop working immediately and ask user to set this environment variable before proceeding.');
   }
 
   // 优先通过项目名查找 ID，否则直接使用 APIFOX_PROJECT_ID
@@ -76,7 +101,7 @@ async function fetchOpenAPI(projectName) {
   }
   if (!resolvedProjectId) {
     throw new Error(
-      'Missing project: provide --projectName or APIFOX_PROJECT_ID'
+      '[ACTION_REQUIRED] Missing project: provide --projectName or APIFOX_PROJECT_ID. AI MUST ask user to provide a project name using --projectName parameter.'
     );
   }
   const url = `${APIFOX_BASE_URL}/projects/${resolvedProjectId}/export-openapi?locale=zh-CN`;
@@ -223,20 +248,40 @@ function printJson(obj) {
  * get_path: 获取接口详情（返回完整的 OpenAPI 3.1.0 规范结构，仅包含相关内容）
  */
 async function cmdGetPath(params) {
-  if (!params.path || !params.method) {
-    throw new Error('Missing required parameters: --path and --method');
+  if (!params.path) {
+    throw new Error('[MISSING_PARAM] Missing required parameter: --path. Usage: get_path --path "/api/xxx" --method "GET"');
   }
 
   const oas = await fetchOpenAPI(params.projectName);
 
   const pathItem = oas.paths?.[params.path];
   if (!pathItem) {
-    throw new Error(`Path not found: ${params.path}`);
+    throw new Error(`[NOT_FOUND] Path not found: ${params.path}. AI should suggest using 'search_paths --keyword <关键词>' to find the correct path.`);
   }
 
-  const operation = pathItem[params.method.toLowerCase()];
+  const availableMethods = Object.keys(pathItem).filter((m) =>
+    ['get', 'post', 'put', 'delete', 'patch'].includes(m.toLowerCase())
+  );
+
+  let method = params.method?.toLowerCase();
+
+  if (!method) {
+    if (availableMethods.length === 1) {
+      method = availableMethods[0];
+    } else {
+      const methodsList = availableMethods.map((m) => m.toUpperCase()).join(', ');
+      throw new Error(
+        `[MULTIPLE_METHODS] Multiple methods available for path: ${params.path}. AI MUST ask user to select one method from: ${methodsList}`
+      );
+    }
+  }
+
+  const operation = pathItem[method];
   if (!operation) {
-    throw new Error(`Method not found: ${params.method.toUpperCase()} ${params.path}`);
+    const methodsList = availableMethods.map((m) => m.toUpperCase()).join(', ');
+    throw new Error(
+      `[NOT_FOUND] Method not found: ${method.toUpperCase()} ${params.path}. Available methods: ${methodsList}. AI should ask user to select a correct method.`
+    );
   }
 
   // 收集涉及的 Schema
@@ -271,7 +316,7 @@ async function cmdGetPath(params) {
     info: oas.info || {},
     paths: {
       [params.path]: {
-        [params.method.toLowerCase()]: operation,
+        [method]: operation,
       },
     },
     components: {
@@ -302,6 +347,10 @@ async function cmdGetPath(params) {
   // 添加顶级 security（如果存在）
   if (oas.security) {
     result.security = oas.security;
+  }
+
+  if (!params.method) {
+    result._autoSelectedMethod = method.toUpperCase();
   }
 
   return result;
@@ -421,6 +470,13 @@ async function cmdGetModule(params) {
 }
 
 /**
+ * list_projects: 列出所有可用的项目名称
+ */
+async function cmdListProjects() {
+  return getAvailableProjects();
+}
+
+/**
  * 主程序
  */
 async function main() {
@@ -443,6 +499,9 @@ async function main() {
         break;
       case 'get_module':
         data = await cmdGetModule(params);
+        break;
+      case 'list_projects':
+        data = await cmdListProjects();
         break;
       default:
         throw new Error(`Unknown command: ${cmd}`);
