@@ -11,7 +11,7 @@ compatibility: 需要 Node.js 和 Apifox API 凭证
 ### 必须提供 --projectName
 
 - 从用户输入中识别：「项目」「模块」「apifox 项目」「apifox 模块」等表述均映射为 `--projectName`
-- **示例**：`读取销售管理模块的 /api/users 接口` → `--projectName="销售管理模块"`
+- **示例**：`读取销售管理模块的 /api/users 接口` → `--projectName "销售管理模块"`
 
 ### ⚠️ 严格禁止
 
