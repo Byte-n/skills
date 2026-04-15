@@ -91,6 +91,7 @@ node scripts/index.js get_module --module "api.users"
 
 - `--module`（必需）：模块名称
 
-## 技巧
+## 最佳实践
 
 - 错误时返回 `{ success: false, error: "message" }`，需向用户清晰解释
+- 在未提供 `--method` 参数时，可以直接通过 `get_path` 获取接口信息，若报错，则再根据错误信息，判断是否需要补充 `--method` 参数。
